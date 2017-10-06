@@ -1,0 +1,2 @@
+163 mail box does not support imap connection from 3rd party client, visit the below url can unlock the limitation
+http://config.mail.163.com/settings/imap/index.jsp?uid=xxxxxxx@163.com

@@ -1,0 +1,36 @@
+import configparser
+def getMailCharset(msg):
+    charset=msg.get_charset()
+    if(charset==None):
+        pos=msg['Content-Type'].find('charset=')
+        charset=msg['Content-Type'][pos+8:].strip()
+    return charset
+
+cfg=configparser.ConfigParser()
+if(cfg.read('../CiriSetting.cfg').count('../CiriSetting.cfg')==0):
+    cfg.read('./CiriSetting.cfg')
+cfgDict=dict(cfg.items(section='ciriMailbox'))
+import poplib
+server=poplib.POP3(cfgDict['pop3_server'])
+server.set_debuglevel(1)
+server.user(cfgDict['address'])
+server.pass_(cfgDict['password'])
+print(server.getwelcome().decode('utf-8'))
+print('Messages: %s. Size: %s' % server.stat())
+resp,mails,octets=server.list()
+print(mails[0].decode())
+index=len(mails)
+resp,lines,octets=server.retr(index)
+msg_raw='\r\n'.join([line.decode() for line in lines])
+import email
+from email.parser import Parser
+from email.header import decode_header
+from email.utils import parseaddr
+msg=Parser().parsestr(msg_raw)
+payload=msg.get_payload()
+charset=getMailCharset(payload[0])
+content=payload[0].get_payload(decode=True)
+content=content.decode(charset)
+for line in lines:
+    print(line.decode())
+pass
