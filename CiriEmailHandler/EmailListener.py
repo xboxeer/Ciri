@@ -29,6 +29,25 @@ def __SendMail(message,messageGUID):
     smtpServer=smtplib.SMTP(ciriSmtpServer)
     smtpServer.login(ciriMailbox,ciriMailboxPwd)
     smtpServer.sendmail(ciriMailbox,item["mailfrom"],mailContent.as_string())
+def getMailCharset(msg):
+    charset=msg.get_charset()
+    if(charset==None):
+        pos=msg['Content-Type'].find('charset=')
+        charset=msg['Content-Type'][pos+8:].strip()
+    return charset
+def SendMessageToGateway(mail, mailMessage):
+    charset=getMailCharset(mail)
+    payload=mail.get_payload(decode=True).decode(charset)
+    subject=''
+    if(mailMessage['Subject']!=None):
+        header=email.header.decode_header(mailMessage['Subject'])[0]
+        if(type(header[0])==str):
+            subject=header[0]
+        else:
+            subject=header[0].decode(header[1])
+    mailFrom=mailMessage['From']
+    message,guid=CiriGateway.CiriGatewayUtility.SendMessageToGateway(payload.strip())
+    messagesToBeSend[guid]={'subject':subject,'mailfrom':mailFrom,'content':message}
 def StartEmailMonitor():
     cfg=configparser.ConfigParser()
     if(cfg.read('../CiriSetting.cfg').count('../CiriSetting.cfg')==0):
@@ -55,15 +74,13 @@ def StartEmailMonitor():
             if(mailMessage.is_multipart()):
                 for mail in mailMessage.get_payload():
                     if(mail['Content-Type'].find('plain')>0):
-                        payload=mail.get_payload(decode=True).decode()
-                        header=email.header.decode_header(mailMessage['Subject'])[0]
-                        subject=header[0].decode(header[1])
-                        mailFrom=mailMessage['From']
-                        message,guid=CiriGateway.CiriGatewayUtility.SendMessageToGateway(payload.strip())
-                        messagesToBeSend[guid]={'subject':subject,'mailfrom':mailFrom,'content':message}
+                        SendMessageToGateway(mail, mailMessage)
             else:
-                mailContent=mailMessage['Content-Type']
+                SendMessageToGateway(mailMessage,mailMessage)
+                #mailContent=mailMessage['Content-Type']
         pass
+
+
 subThread=threading.Thread(target=CiriGateway.CiriGatewayUtility.SubscribeMessageFromServer,args=(__SendMail,))
 subThread.start()
 emailMonitorThread=threading.Thread(target=StartEmailMonitor,daemon=True)
