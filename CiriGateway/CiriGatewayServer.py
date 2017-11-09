@@ -45,11 +45,29 @@ def RouteToNLTKProcessor(message):
     import CiriUtility.Utility
     guid=CiriUtility.Utility.GetMessageGUID(message.decode('utf-8'))
     message=CiriUtility.Utility.GetMessageContent(message.decode('utf-8'))
+    from chatterbot import ChatBot
+    ciri=ChatBot('Ciri',logic_adapters=["chatterbot.logic.MathematicalEvaluation",
+        "chatterbot.logic.TimeLogicAdapter",
+        {"import_path": "chatterbot.logic.BestMatch",
+         "statement_comparison_function": "chatterbot.comparisons.levenshtein_distance",
+         "response_selection_method": "chatterbot.response_selection.get_first_response"}])
+    from chatterbot.trainers import ListTrainer
+    conversion=[
+    "Hello",
+    "Hi there!",
+    "How are you doing?",
+    "I'm doing great.",
+    "That is good to hear",
+    "Thank you.",
+    "You're welcome."]
+    ciri.set_trainer(ListTrainer)
+    ciri.train(conversion)
     if(message == 'Hello Ciri'):
         print('Hit, replying')
         returnMessage='Hello'
     else:
-        print('Not hit')
-        returnMessage="Sorry I don't understand"
+        returnMessage=ciri.get_response(message).text
+        #print('Not hit')
+        #returnMessage="Sorry I don't understand"
     returnMessage=returnMessage+":"+guid
     replyQueue.put(returnMessage)
